@@ -1,10 +1,24 @@
 spring:
   application:
     name: purple-ai-code-backend
+  # mysql
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/purple_ai_code
+    username: root
+    password: root
+  # 文件上传限制
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 server:
   port: 8123
   servlet:
     context-path: /api
+logging:
+  level:
+    com.purple.purpleaicode.mapper: debug
 # springdoc-openapi项目配置
 springdoc:
   group-configs:
@@ -16,3 +30,7 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+# 存储路径配置
+storage:
+  base-path: E:/uploads/avatars
