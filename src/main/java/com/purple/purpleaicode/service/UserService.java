@@ -2,7 +2,7 @@ package com.purple.purpleaicode.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
-import com.purple.purpleaicode.model.dto.UserQueryRequest;
+import com.purple.purpleaicode.model.dto.user.UserQueryRequest;
 import com.purple.purpleaicode.model.entity.User;
 import com.purple.purpleaicode.model.vo.LoginUserVO;
 import com.purple.purpleaicode.model.vo.UserVO;
@@ -80,7 +80,7 @@ public interface UserService extends IService<User> {
     QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest);
 
     /**
-     * 密码加迷
+     * 密码加密
      * @param password 密码
      * @return 加密后的密码
      */

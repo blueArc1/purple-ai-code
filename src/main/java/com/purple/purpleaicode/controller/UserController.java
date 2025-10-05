@@ -6,12 +6,12 @@ import com.purple.purpleaicode.annotation.AuthCheck;
 import com.purple.purpleaicode.common.BaseResponse;
 import com.purple.purpleaicode.common.DeleteRequest;
 import com.purple.purpleaicode.common.ResultUtils;
+import com.purple.purpleaicode.model.dto.user.*;
 import com.purple.purpleaicode.service.FileService;
 import com.purple.purpleaicode.constant.UserConstant;
 import com.purple.purpleaicode.exception.BusinessException;
 import com.purple.purpleaicode.exception.ErrorCode;
 import com.purple.purpleaicode.exception.ThrowUtils;
-import com.purple.purpleaicode.model.dto.*;
 import com.purple.purpleaicode.model.vo.LoginUserVO;
 import com.purple.purpleaicode.model.vo.UserVO;
 import jakarta.annotation.Resource;
@@ -56,8 +56,8 @@ public class UserController {
 
     /**
      * 用户登录
-     * @param userLoginRequest
-     * @param request
+     * @param userLoginRequest 用户登录请求
+     * @param request 请求
      * @return
      */
     @PostMapping("/login")
@@ -71,8 +71,8 @@ public class UserController {
 
     /**
      * 获取当前登录用户。
-     * @param request
-     * @return
+     * @param request 请求
+     * @return 当前登录用户
      */
     @GetMapping("/get/login")
     public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
@@ -82,8 +82,8 @@ public class UserController {
 
     /**
      * 注销用户
-     * @param request
-     * @return
+     * @param request 请求
+     * @return 注销结果
      */
     @PostMapping("/logout")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
@@ -94,6 +94,8 @@ public class UserController {
 
     /**
      * 创建用户
+     * @param userAddRequest 用户创建请求
+     * @return 用户id
      */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -112,6 +114,8 @@ public class UserController {
 
     /**
      * 删除用户
+     * @param deleteRequest 删除请求
+     * @return 删除结果
      */
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -125,22 +129,26 @@ public class UserController {
 
     /**
      * 更新用户
+     * @param userUpdateRequest 用户更新请求
+     * @return 更新结果
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
-        if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
+        if (userUpdateRequest == null || userUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User user = new User();
         BeanUtil.copyProperties(userUpdateRequest, user);
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(true);
+        return ResultUtils.success(result);
     }
 
     /**
      * 根据 id 获取用户（仅管理员）
+     * @param id 用户id
+     * @return 用户
      */
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -153,6 +161,8 @@ public class UserController {
 
     /**
      * 根据 id 获取包装类
+     * @param id 用户id
+     * @return 包装类
      */
     @GetMapping("/get/vo")
     public BaseResponse<UserVO> getUserVOById(long id) {
@@ -164,7 +174,7 @@ public class UserController {
     /**
      * 分页获取用户封装列表（仅管理员）
      * @param userQueryRequest 查询请求参数
-     * @return
+     * @return 用户列表
      */
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -181,6 +191,11 @@ public class UserController {
         return ResultUtils.success(userVOPage);
     }
 
+    /**
+     * 用户更新用户信息
+     * @param userUpdateMyselfRequest 用户更新请求
+     * @return 更新结果
+     */
     @PostMapping("/updateMyself")
     public BaseResponse<Boolean> updateUser(@ModelAttribute @Valid UserUpdateMyselfRequest userUpdateMyselfRequest) {
         User user = new User();

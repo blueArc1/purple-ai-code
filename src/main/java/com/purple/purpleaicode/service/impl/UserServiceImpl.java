@@ -7,7 +7,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.purple.purpleaicode.exception.BusinessException;
 import com.purple.purpleaicode.exception.ErrorCode;
-import com.purple.purpleaicode.model.dto.UserQueryRequest;
+import com.purple.purpleaicode.model.dto.user.UserQueryRequest;
 import com.purple.purpleaicode.model.entity.User;
 import com.purple.purpleaicode.mapper.UserMapper;
 import com.purple.purpleaicode.model.enums.UserRoleEnum;
