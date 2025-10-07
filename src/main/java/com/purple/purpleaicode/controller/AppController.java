@@ -206,7 +206,7 @@ public class AppController {
      * @return 应用列表
      */
     @PostMapping("/my/list/page/vo")
-    public BaseResponse<Page<AppVO>> listMyAppVOPage(@RequestBody AppQueryRequest appQueryRequest, HttpServletRequest request) {
+    public BaseResponse<Page<AppVO>> listMyAppVOByPage(@RequestBody AppQueryRequest appQueryRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(appQueryRequest == null, ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         // 限制每页最多 20 个
@@ -298,7 +298,7 @@ public class AppController {
      */
     @PostMapping("/admin/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Page<AppVO>> listAppVOPageByAdmin(@RequestBody AppQueryRequest appQueryRequest) {
+    public BaseResponse<Page<AppVO>> listAppVOByPageByAdmin(@RequestBody AppQueryRequest appQueryRequest) {
         ThrowUtils.throwIf(appQueryRequest == null, ErrorCode.PARAMS_ERROR);
         long pageSize = appQueryRequest.getPageSize();
         long pageNum = appQueryRequest.getPageNum();

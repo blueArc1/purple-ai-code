@@ -82,6 +82,11 @@ const originItems = [
     label: '应用管理',
     title: '应用管理',
   },
+  {
+    key: '/admin/chatHistoryManage',
+    label: '对话管理',
+    title: '对话管理',
+  },
 ]
 
 // 过滤菜单项

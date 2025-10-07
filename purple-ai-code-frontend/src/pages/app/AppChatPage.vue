@@ -16,7 +16,7 @@
           <template #icon>
             <CloudUploadOutlined />
           </template>
-          部署按钮
+          部署
         </a-button>
       </div>
     </div>
@@ -27,6 +27,13 @@
       <div class="chat-section">
         <!-- 消息区域 -->
         <div class="messages-container" ref="messagesContainer">
+          <!-- 加载更多按钮 -->
+          <div v-if="hasMoreHistory" class="load-more-container">
+            <a-button type="link" @click="loadMoreHistory" :loading="loadingHistory">
+              加载更多历史消息
+            </a-button>
+          </div>
+
           <div v-for="(message, index) in messages" :key="index" class="message-item">
             <div v-if="message.type === 'user'" class="user-message">
               <div class="message-content">{{ message.content }}</div>
@@ -148,6 +155,7 @@ import {
   deployApp as deployAppApi,
   deleteApp as deleteAppApi,
 } from '@/api/appController'
+import { listAppChatHistory } from '@/api/chatHistoryController'
 import { CodeGenTypeEnum } from '@/utils/codeGenTypes'
 import request from '@/request'
 
@@ -177,13 +185,19 @@ interface Message {
   type: 'user' | 'ai'
   content: string
   loading?: boolean
+  createTime?: string // 用于游标分页
 }
 
-const messages = ref<Message[]>([])
+const messages = ref<Message[]>([]) // 对话消息列表
 const userInput = ref('')
 const isGenerating = ref(false)
 const messagesContainer = ref<HTMLElement>()
-const hasInitialConversation = ref(false) // 标记是否已经进行过初始对话
+// 对话历史相关
+// const hasInitialConversation = ref(false) // 标记是否已经进行过初始对话
+const loadingHistory = ref(false) // 标记是否正在加载历史消息
+const hasMoreHistory = ref(false) // 标记是否有更多历史消息
+const lastCreateTime = ref<string>() // 最后一条消息的创建时间，用于游标分页
+const historyLoaded = ref(false) // 是否显示网站
 
 // 预览相关
 const previewUrl = ref('')
@@ -211,6 +225,101 @@ const showAppDetail = () => {
   appDetailVisible.value = true
 }
 
+/**
+ * 加载对话历史
+ * 使用游标分页，按照创建时间升序排列
+ */
+const loadChatHistory = async (isLoadMore = false) => {
+  if (!appId.value || loadingHistory.value) return
+  loadingHistory.value = true
+  try {
+    const params: API.ChatHistoryQueryRequest = {
+      appId: appId.value, // 直接使用字符串避免精度丢失
+      pageSize: 10,
+    }
+    // 如果是加载更多，传递最后一条消息的创建时间作为游标
+    if (isLoadMore && lastCreateTime.value) {
+      params.lastCreateTime = lastCreateTime.value
+    }
+    const res = await listAppChatHistory(params)
+    if (res.data.code === 0 && res.data.data) {
+      const chatHistories = res.data.data.records || []
+
+      if (chatHistories.length > 0) {
+        // 将对话历史转换为消息格式，并按时间正序排列（老消息在前）
+        const historyMessages: Message[] = chatHistories
+          .map((chat) => ({
+            type: (chat.messageType === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+            content: chat.message || '',
+            createTime: chat.createTime,
+          }))
+          .reverse() // 反转数组，让老消息在前
+
+        // 在添加新消息到DOM之前，先获取当前的DOM状态
+        let previousHeight = 0
+
+        if (isLoadMore && messagesContainer.value) {
+          // 保存当前容器的高度，用于后续计算
+          previousHeight = messagesContainer.value.scrollHeight
+
+          // 禁用平滑滚动，确保滚动位置立即设置
+          messagesContainer.value.style.scrollBehavior = 'auto'
+        }
+
+        if (isLoadMore) {
+          // 加载更多时，将历史消息添加到开头
+          messages.value.unshift(...historyMessages)
+        } else {
+          // 初始加载，直接设置消息列表
+          messages.value = historyMessages
+        }
+
+        // 更新游标
+        lastCreateTime.value = chatHistories[chatHistories.length - 1]?.createTime
+        // 检查是否还有更多历史
+        hasMoreHistory.value = chatHistories.length === 10
+
+        // 等待DOM更新后处理滚动
+        await nextTick()
+        if (isLoadMore && messagesContainer.value) {
+          // 计算新增内容导致的高度增加
+          const newHeight = messagesContainer.value.scrollHeight
+          const heightIncrease = newHeight - previousHeight
+
+          // 将滚动位置设置为增加的高度，这样新加载的内容会出现在视图上方
+          // 而用户正在查看的内容位置保持不变，不会有任何跳动
+          messagesContainer.value.scrollTop = heightIncrease
+
+          // 恢复平滑滚动行为
+          setTimeout(() => {
+            if (messagesContainer.value) {
+              messagesContainer.value.style.scrollBehavior = 'smooth'
+            }
+          }, 0)
+        } else {
+          // 初始加载时滚动到底部
+          scrollToBottom()
+        }
+      } else {
+        hasMoreHistory.value = false
+      }
+      historyLoaded.value = true
+    }
+  } catch (error) {
+    console.error('加载对话历史失败：', error)
+    message.error('加载对话历史失败')
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
+/**
+ * 加载更多历史消息
+ */
+const loadMoreHistory = async () => {
+  await loadChatHistory(true) // 传递isLoadMore参数为true
+}
+
 // 获取应用信息
 const fetchAppInfo = async () => {
   const id = route.params.id as string
@@ -223,16 +332,25 @@ const fetchAppInfo = async () => {
   appId.value = id
 
   try {
-    const res = await getAppVoById({ id: id as unknown as number })
+    const res = await getAppVoById({ id: id }) // 直接传递字符串避免精度丢失
     if (res.data.code === 0 && res.data.data) {
       appInfo.value = res.data.data
 
-      // 检查是否有view=1参数，如果有则不自动发送初始提示词
-      const isViewMode = route.query.view === '1'
+      // 加载对话历史
+      await loadChatHistory()
 
-      // 自动发送初始提示词（除非是查看模式或已经进行过初始对话）
-      if (appInfo.value.initPrompt && !isViewMode && !hasInitialConversation.value) {
-        hasInitialConversation.value = true
+      // 如果有至少2条对话记录，更新预览
+      if (messages.value.length >= 2) {
+        updatePreview()
+      }
+      // 检查是否需要自动发送初始提示词
+      // 只有在是自己的应用且没有对话历史时才自动发送
+      if (
+        appInfo.value.initPrompt &&
+        isOwner.value &&
+        messages.value.length === 0 &&
+        historyLoaded.value
+      ) {
         await sendInitialMessage(appInfo.value.initPrompt)
       }
     } else {
@@ -245,7 +363,6 @@ const fetchAppInfo = async () => {
     router.push('/')
   }
 }
-
 // 发送初始消息
 const sendInitialMessage = async (prompt: string) => {
   // 添加用户消息
@@ -421,7 +538,7 @@ const deployApp = async () => {
   deploying.value = true
   try {
     const res = await deployAppApi({
-      appId: appId.value as unknown as number,
+      appId: appId.value, // 直接传递字符串避免精度丢失
     })
 
     if (res.data.code === 0 && res.data.data) {
@@ -603,6 +720,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   color: #666;
+}
+
+/* 加载更多按钮 */
+.load-more-container {
+  text-align: center;
+  padding: 8px 0;
+  margin-bottom: 16px;
 }
 
 /* 输入区域 */
