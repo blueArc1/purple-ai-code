@@ -124,7 +124,7 @@ const viewChat = (appId: string | number | undefined) => {
 // 查看作品
 const viewWork = (app: API.AppVO) => {
   if (app.deployKey) {
-    const url = getDeployUrl(app.deployKey)
+    let url = getDeployUrl(app.deployKey)
     window.open(url, '_blank')
   }
 }

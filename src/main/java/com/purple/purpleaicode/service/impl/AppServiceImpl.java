@@ -9,6 +9,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.purple.purpleaicode.constant.AppConstant;
 import com.purple.purpleaicode.core.AiCodeGeneratorFacade;
+import com.purple.purpleaicode.core.handler.StreamHandlerExecutor;
 import com.purple.purpleaicode.exception.BusinessException;
 import com.purple.purpleaicode.exception.ErrorCode;
 import com.purple.purpleaicode.exception.ThrowUtils;
@@ -37,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+
 /**
  * 应用 服务层实现。
  *
@@ -54,6 +56,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private StreamHandlerExecutor streamhandlerExecutor;
 
     /**
      * 聊天生成代码
@@ -86,25 +91,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         // 6.调用 AI 生成代码（流式）
         Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
         // 7.收集AI响应内容并在完成后记录到对话历史
-        StringBuilder aiResponseBuilder = new StringBuilder();
-        return contentFlux
-                .map(chunk -> {
-                    // 收集AI相应内容
-                    aiResponseBuilder.append(chunk);
-                    return chunk;
-                })
-                .doOnComplete(() -> {
-                    // 流式响应完成后，添加AI消息到对话历史
-                    String aiResponse = aiResponseBuilder.toString();
-                    if (StrUtil.isNotBlank(aiResponse)) {
-                        chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                    }
-                })
-                .doOnError(error -> {
-                    // 如果AI回复失败，也要记录错误信息
-                    String errorMessage = "AI回复失败：" + error.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                });
+        return streamhandlerExecutor.doExcute(contentFlux, chatHistoryService, appId, loginUser, codeGenTypeEnum);
     }
 
     /**
@@ -136,6 +123,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         String codeGenType = app.getCodeGenType();
         String sourceDirName = codeGenType + "_" + appId;
         String sourceDirPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + sourceDirName;
+        // 如果是 Vue 项目，复制的是sourceDirPath下的 dist 目录到部署文件夹
+        if (CodeGenTypeEnum.VUE_PROJECT.getValue().equals(codeGenType)) {
+            sourceDirPath = sourceDirPath + File.separator + "dist";
+        }
         // 6.检查源目录是否存在
         File sourceDir = new File(sourceDirPath);
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {

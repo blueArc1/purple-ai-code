@@ -47,7 +47,7 @@ public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatH
      * @return 加载的条数
      */
     @Override
-    public int loadChatHistory(Long appId, MessageWindowChatMemory chatMemory, int maxCount) {
+    public int loadChatHistory(long appId, MessageWindowChatMemory chatMemory, int maxCount) {
         try {
             // 直接构造查询条件，起始点为 1 而不是 0，用于排除最新的用户信息
             QueryWrapper queryWrapper = QueryWrapper.create()
