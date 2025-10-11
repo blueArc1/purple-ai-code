@@ -23,6 +23,7 @@ import com.purple.purpleaicode.model.enums.CodeGenTypeEnum;
 import com.purple.purpleaicode.model.vo.UserVO;
 import com.purple.purpleaicode.service.AppService;
 import com.purple.purpleaicode.service.ChatHistoryService;
+import com.purple.purpleaicode.service.ScreenshotService;
 import com.purple.purpleaicode.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +60,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
 
     @Resource
     private StreamHandlerExecutor streamhandlerExecutor;
+
+    @Resource
+    private ScreenshotService screenshotService;
 
     /**
      * 聊天生成代码
@@ -146,12 +150,50 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         updateApp.setDeployedTime(LocalDateTime.now());
         boolean updateResult = this.updateById(updateApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
-        // 9.返回可访问的 URL
-        return String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        // 9.构建应用访问 URL
+        String appDeployUrl = String.format("%s/%s", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        // 10.异步生成截图并更新应用封面
+        String oldCover = app.getCover();
+        generateAppScreenshotAsync(appId, oldCover, appDeployUrl);
+        return appDeployUrl;
     }
 
     /**
-     * 删除应用时关联删除对话历史
+     * 异步生成并上传应用截图
+     *
+     * @param appId        应用ID
+     * @param oldCover    旧封面URL
+     * @param appUrl       应用URL
+     */
+    private void generateAppScreenshotAsync(Long appId, String oldCover, String appUrl) {
+        // 使用虚拟线程异步执行
+        Thread.startVirtualThread(() -> {
+            // 调用截图服务生成截图并上传
+            String screenshotUrl = screenshotService.generateAndUploadScreenshot(appUrl);
+            // 如果应用已有封面，先删除 COS 中的旧封面
+            if (StrUtil.isNotBlank(oldCover)) {
+                try {
+                    boolean isDeleted = screenshotService.deleteCosScreenshot(oldCover);
+                    if (!isDeleted) {
+                        log.error("删除旧封面失败：{}", oldCover);
+                    } else {
+                        log.info("成功删除就封面：{}", oldCover);
+                    }
+                } catch (Exception e) {
+                    log.error("删除旧封面失败：{}", oldCover, e);
+                }
+            }
+            // 更新应用的封面字段
+            App updateApp = new App();
+            updateApp.setId(appId);
+            updateApp.setCover(screenshotUrl);
+            boolean updateResult = this.updateById(updateApp);
+            ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
+        });
+    }
+
+    /**
+     * 删除应用时关联删除对话历史,删除 COS 里的封面文件
      * @param id 应用ID
      * @return 是否删除成功
      */
@@ -171,6 +213,16 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         } catch (Exception e) {
             // 记录日志但不阻止应用删除
             log.error("删除应用关联的对话历史失败：{}", e.getMessage());
+        }
+        // 删除 COS 里的封面文件
+        try {
+            App app = this.getById(appId);
+            if (StrUtil.isNotBlank(app.getCover())) {
+                screenshotService.deleteCosScreenshot(app.getCover());
+            }
+        } catch (Exception e) {
+            // 记录日志但不阻止应用删除
+            log.error("删除应用关联的COS 里的封面文件失败：{}", e.getMessage());
         }
         // 删除应用
         return super.removeById(id);
