@@ -60,8 +60,8 @@ langchain4j:
       base-url: https://api.deepseek.com
       model-name: deepseek-chat
       max-tokens: 8192
-      strict-json-schema: true
-      response-format: json_object
+#      strict-json-schema: true
+#      response-format: json_object
       log-requests: true
       log-responses: true
     streaming-chat-model:

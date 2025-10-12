@@ -2,6 +2,7 @@ package com.purple.purpleaicode.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import com.purple.purpleaicode.model.dto.app.AppAddRequest;
 import com.purple.purpleaicode.model.dto.app.AppQueryRequest;
 import com.purple.purpleaicode.model.dto.app.AppVO;
 import com.purple.purpleaicode.model.entity.App;
@@ -33,6 +34,14 @@ public interface AppService extends IService<App> {
      * @return 部署URL
      */
     String deployApp(Long appId, User loginUser);
+
+    /**
+     * 创建应用
+     * @param appAddRequest
+     * @param loginUser
+     * @return
+     */
+    Long createApp(AppAddRequest appAddRequest, User loginUser);
 
     /**
      * 获取AppVO
