@@ -98,7 +98,7 @@ public class AiCodeGeneratorServiceFactory {
                 .maxMessages(50)
                 .build();
         // 从数据库加载历史对话到记忆中
-        chatHistoryService.loadChatHistory(appId, chatMemory, 50);
+        chatHistoryService.loadChatHistory(appId, chatMemory, 20);
         // 根据代码生成类型选择不同的模型配置
         return switch (codeGenType) {
             case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
