@@ -18,7 +18,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ImageCollectionServiceFactory {
 
-    @Resource
+    //暂时不支持多例
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
 
     @Resource

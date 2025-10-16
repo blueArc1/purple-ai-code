@@ -2,10 +2,16 @@ package com.purple.purpleaicode.common;
 
 import com.purple.purpleaicode.exception.ErrorCode;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
+/**
+ * 通用返回类型
+ * @param <T>
+ */
 @Data
+@NoArgsConstructor
 public class BaseResponse<T> implements Serializable {
 
     private int code;
