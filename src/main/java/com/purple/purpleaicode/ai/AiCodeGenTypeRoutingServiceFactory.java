@@ -1,10 +1,13 @@
 package com.purple.purpleaicode.ai;
 
+import com.purple.purpleaicode.ai.guardrail.PromptSafetyInputGuardrail;
+import com.purple.purpleaicode.ai.guardrail.RetryOutputGuardrail;
 import com.purple.purpleaicode.utils.SpringContextUtil;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import reactor.util.retry.Retry;
 
 /**
  * AI代码生成类型智能路由服务工厂
@@ -20,6 +23,8 @@ public class AiCodeGenTypeRoutingServiceFactory {
         ChatModel chatModel = SpringContextUtil.getBean("routingChatModelPrototype", ChatModel.class);
         return AiServices.builder(AiCodeGenTypeRoutingService.class)
                 .chatModel(chatModel)
+                .inputGuardrails(new PromptSafetyInputGuardrail())
+                .outputGuardrails(new RetryOutputGuardrail())
                 .build();
     }
 

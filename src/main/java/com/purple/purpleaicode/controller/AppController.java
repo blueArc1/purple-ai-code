@@ -15,6 +15,8 @@ import com.purple.purpleaicode.exception.ErrorCode;
 import com.purple.purpleaicode.exception.ThrowUtils;
 import com.purple.purpleaicode.model.dto.app.*;
 import com.purple.purpleaicode.model.entity.User;
+import com.purple.purpleaicode.ratelimiter.annotation.RateLimit;
+import com.purple.purpleaicode.ratelimiter.enums.RateLimitType;
 import com.purple.purpleaicode.service.ProjectDownloadService;
 import com.purple.purpleaicode.service.UserService;
 import jakarta.annotation.Resource;
@@ -94,6 +96,7 @@ public class AppController {
      * @return 生成结果流
      */
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(limitType = RateLimitType.USER, rate = 5, rateInterval = 60, message = "AI 对话请求过于繁忙，请稍后再试")
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId, @RequestParam String message,
                                                        HttpServletRequest request) {
         // 参数校验

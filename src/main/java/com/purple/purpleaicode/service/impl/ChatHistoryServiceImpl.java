@@ -1,4 +1,5 @@
 package com.purple.purpleaicode.service.impl;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -100,6 +101,14 @@ public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatH
         //验证消息类型是否有效
         ChatHistoryMessageTypeEnum messageTypeEnum = ChatHistoryMessageTypeEnum.getEnumByValue(messageType);
         ThrowUtils.throwIf(messageTypeEnum == null, ErrorCode.PARAMS_ERROR, "不支持的消息类型" + messageType);
+
+        // 检查字符串字节长度（UTF-8编码），合理限制消息大小以避免性能问题
+        final int MAX_BYTE_LENGTH = 65500;
+        if (message != null && message.getBytes(StandardCharsets.UTF_8).length > MAX_BYTE_LENGTH) {
+            // 截断到65530字节并添加提示信息
+            message = new String(message.getBytes(StandardCharsets.UTF_8), 0, MAX_BYTE_LENGTH, StandardCharsets.UTF_8) + "...[消息过长已截断]";
+            log.warn("消息内容过长，已截断保存，appId: {}, userId: {}", appId, userId);
+        }
 
         ChatHistory chatHistory = ChatHistory.builder()
                 .appId(appId)

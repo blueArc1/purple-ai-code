@@ -1,4 +1,4 @@
-package com.purple.purpleaicode.aop;
+package com.purple.purpleaicode.aspect;
 
 import com.purple.purpleaicode.annotation.AuthCheck;
 import com.purple.purpleaicode.exception.BusinessException;

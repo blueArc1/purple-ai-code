@@ -2,6 +2,8 @@ package com.purple.purpleaicode.ai;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.purple.purpleaicode.ai.guardrail.PromptSafetyInputGuardrail;
+import com.purple.purpleaicode.ai.guardrail.RetryOutputGuardrail;
 import com.purple.purpleaicode.ai.tools.ToolManager;
 import com.purple.purpleaicode.exception.BusinessException;
 import com.purple.purpleaicode.exception.ErrorCode;
@@ -105,6 +107,8 @@ public class AiCodeGeneratorServiceFactory {
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called" + toolExecutionRequest.name()
                         ))
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+//                        .outputGuardrails(new RetryOutputGuardrail()) // 为了流式输出，这里不使用
                         .build();
             }
             // HTML 和多文件生成使用默认模型
@@ -116,6 +120,8 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(streamingChatModel)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+//                        .outputGuardrails(new RetryOutputGuardrail()) // 为了流式输出，这里不使用
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持的代码生成类型: " + codeGenType.getValue());
