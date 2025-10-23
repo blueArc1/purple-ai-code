@@ -4,7 +4,10 @@ import cn.hutool.core.util.RuntimeUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -85,7 +88,7 @@ public class VueProjectBuilder {
      */
     private boolean executeNpmBuild(File projectDir) {
         log.info("执行 npm run build...");
-        String command = String.format("%s run build", buildCommand("npm"));
+        String command = String.format("%s run build --verbose", buildCommand("npm"));
         return executeCommand(projectDir, command, 180);// 3分钟超时
     }
 
@@ -124,6 +127,17 @@ public class VueProjectBuilder {
                     workingDir,
                     command.split("\\s+") // 按空格分割命令为数组
             );
+            // 读取输出流和错误流
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+            while ((line = errorReader.readLine()) != null) {
+                System.err.println(line);
+            }
             // 等待进程完成，设置超时
             boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
             if (!finished) {
@@ -131,6 +145,7 @@ public class VueProjectBuilder {
                 process.destroyForcibly();
                 return false;
             }
+
             int exitCode = process.exitValue();
             if (exitCode == 0) {
                 log.info("命令执行成功");
